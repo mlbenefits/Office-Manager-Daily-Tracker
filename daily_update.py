@@ -246,23 +246,17 @@ def compute_avg_response(target_date, max_workers=20):
 def get_sheets_client():
     """
     Return an authenticated gspread client.
-    - GitHub Actions: uses GOOGLE_CREDENTIALS_JSON env var (service account JSON).
+    - GitHub Actions: reads service account JSON from GOOGLE_APPLICATION_CREDENTIALS path.
     - Local: uses OAuth token cached by gspread (~/.config/gspread/).
     """
-    creds_json = os.getenv("GOOGLE_CREDENTIALS_JSON")
-    print(f"  GOOGLE_CREDENTIALS_JSON present: {bool(creds_json)}")
-    if creds_json:
+    creds_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+    if creds_path and os.path.exists(creds_path):
         from google.oauth2.service_account import Credentials as SACredentials
-        creds = SACredentials.from_service_account_info(
-            json.loads(creds_json),
+        creds = SACredentials.from_service_account_file(
+            creds_path,
             scopes=["https://www.googleapis.com/auth/spreadsheets"],
         )
         return gspread.authorize(creds)
-    if os.getenv("GITHUB_ACTIONS"):
-        raise RuntimeError(
-            "GOOGLE_CREDENTIALS_JSON secret is not set — add it in "
-            "Settings -> Secrets and variables -> Actions"
-        )
     return gspread.oauth()
 
 
