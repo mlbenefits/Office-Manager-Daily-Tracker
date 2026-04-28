@@ -5,7 +5,6 @@ Runs every morning at 8 AM Eastern to:
 2. Write the avg response time (in minutes) into column J of the Daily Tracker
 """
 
-import json
 import os
 import statistics
 import sys
@@ -244,19 +243,7 @@ def compute_avg_response(target_date, max_workers=20):
 
 
 def get_sheets_client():
-    """
-    Return an authenticated gspread client.
-    - GitHub Actions: uses GOOGLE_CREDENTIALS_JSON env var (service account JSON).
-    - Local: uses OAuth token cached by gspread (~/.config/gspread/).
-    """
-    creds_json = os.getenv("GOOGLE_CREDENTIALS_JSON")
-    if creds_json:
-        from google.oauth2.service_account import Credentials as SACredentials
-        creds = SACredentials.from_service_account_info(
-            json.loads(creds_json),
-            scopes=["https://www.googleapis.com/auth/spreadsheets"],
-        )
-        return gspread.authorize(creds)
+    """Return an authenticated gspread client using OAuth token cached in ~/.config/gspread/."""
     return gspread.oauth()
 
 
