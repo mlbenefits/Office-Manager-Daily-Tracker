@@ -1,0 +1,59 @@
+name: Debug — List conversations for a date
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_date:
+        description: "Date to analyze (YYYY-MM-DD)"
+        required: true
+        default: "2026-05-13"
+
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: claude/fix-google-sheet-writing-N6fi2
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: List conversations
+        env:
+          GHL_API_KEY: ${{ secrets.GHL_API_KEY }}
+          GHL_LOCATION_ID: ${{ secrets.GHL_LOCATION_ID }}
+        run: |
+          python - <<'EOF'
+          import os, sys
+          sys.path.insert(0, ".")
+          from datetime import date
+          from daily_update import get_conversations_for_date, get_first_response_time
+          import statistics
+
+          target = date.fromisoformat("${{ github.event.inputs.target_date }}")
+          convos = get_conversations_for_date(target)
+          print(f"Found {len(convos)} conversations for {target}\n")
+
+          results = []
+          for c in convos:
+              t = get_first_response_time(c)
+              results.append((c.get("contactName") or c.get("id"), t))
+
+          results.sort(key=lambda x: x[1] or 0, reverse=True)
+
+          times = [t for _, t in results if t is not None]
+          for name, mins in results:
+              if mins is not None:
+                  print(f"{mins:>8.1f} min  {name}")
+              else:
+                  print(f"   no reply  {name}")
+
+          if times:
+              print(f"\nAverage: {round(statistics.mean(times), 1)} min over {len(times)} conversations")
+          EOF
