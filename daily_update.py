@@ -38,6 +38,9 @@ COLUMN_J = 10
 BASE_DATE = date(2026, 1, 1)
 BASE_ROW = 6
 
+# Conversation types excluded from response-time tracking (low-intent social channels)
+EXCLUDED_TYPES = {"TYPE_FB_MESSENGER", "TYPE_INSTAGRAM_MESSENGER"}
+
 _rate_lock = threading.Semaphore(10)
 
 
@@ -86,7 +89,8 @@ def get_conversations_for_date(target_date):
                 passed_cutoff = True
                 continue
             if created_ms is not None and start_ms <= created_ms < end_ms:
-                conversations.append(convo)
+                if convo.get("type") not in EXCLUDED_TYPES:
+                    conversations.append(convo)
 
         if passed_cutoff or len(batch) < limit:
             break
