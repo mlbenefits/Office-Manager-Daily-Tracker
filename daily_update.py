@@ -185,7 +185,7 @@ def get_first_response_time(convo):
         if "ACTIVITY" in msg_type:
             return False
         if "CALL" in msg_type or "VOICEMAIL" in msg_type:
-            return str(msg.get("status", "")).lower() in ("answered", "voicemail", "completed")
+            return str(msg.get("status", "")).lower() in ("answered", "voicemail")
         return True
 
     first_inbound_ts = None
