@@ -3,7 +3,12 @@ name: Daily Response Time Update
 on:
   schedule:
     - cron: "0 12 * * 1-5"  # 8 AM EDT (UTC-4), Mon–Fri; shift to 13:00 in winter (EST)
-  workflow_dispatch:          # allow manual runs from the Actions tab
+  workflow_dispatch:
+    inputs:
+      target_date:
+        description: "Date to process (YYYY-MM-DD). Leave blank for last business day."
+        required: false
+        default: ""
 
 jobs:
   update:
@@ -30,4 +35,9 @@ jobs:
           GHL_API_KEY: ${{ secrets.GHL_API_KEY }}
           GHL_LOCATION_ID: ${{ secrets.GHL_LOCATION_ID }}
           GOOGLE_APPLICATION_CREDENTIALS: /tmp/google-creds.json
-        run: python daily_update.py
+        run: |
+          if [ -n "${{ github.event.inputs.target_date }}" ]; then
+            python daily_update.py --date "${{ github.event.inputs.target_date }}"
+          else
+            python daily_update.py
+          fi
