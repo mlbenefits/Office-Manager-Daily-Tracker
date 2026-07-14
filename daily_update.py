@@ -178,6 +178,8 @@ def get_first_response_time(convo):
               or datetime.min.replace(tzinfo=timezone.utc))
 
     OPT_OUT_KEYWORDS = {"stop", "stopall", "unsubscribe", "cancel", "end", "quit"}
+    DND_SIGNAL_PHRASES = ("dnd", "do not disturb", "opted out", "opt-out", "unsubscribed")
+    DND_LOOKAHEAD_SECONDS = 120
 
     def is_inbound_trackable(msg):
         msg_type = str(msg.get("messageType", msg.get("type", ""))).upper()
@@ -187,6 +189,23 @@ def get_first_response_time(convo):
         if body in OPT_OUT_KEYWORDS:
             return False
         return True
+
+    def triggers_dnd(idx):
+        """True if a DND/opt-out activity log follows this message shortly after."""
+        ts = parse_ts(msgs[idx].get("dateAdded") or msgs[idx].get("date"))
+        if ts is None:
+            return False
+        for nxt in msgs[idx + 1: idx + 4]:
+            nxt_type = str(nxt.get("messageType", nxt.get("type", ""))).upper()
+            if "ACTIVITY" not in nxt_type:
+                continue
+            nxt_ts = parse_ts(nxt.get("dateAdded") or nxt.get("date"))
+            if nxt_ts and (nxt_ts - ts).total_seconds() > DND_LOOKAHEAD_SECONDS:
+                break
+            body = str(nxt.get("body", "")).lower()
+            if any(phrase in body for phrase in DND_SIGNAL_PHRASES):
+                return True
+        return False
 
     def is_outbound_trackable(msg):
         msg_type = str(msg.get("messageType", msg.get("type", ""))).upper()
@@ -199,7 +218,8 @@ def get_first_response_time(convo):
     first_inbound_ts = None
     first_inbound_idx = None
     for idx, msg in enumerate(msgs):
-        if msg.get("direction", "").lower() == "inbound" and is_inbound_trackable(msg):
+        if (msg.get("direction", "").lower() == "inbound" and is_inbound_trackable(msg)
+                and not triggers_dnd(idx)):
             ts = parse_ts(msg.get("dateAdded") or msg.get("date"))
             if ts and not is_business_hours(ts):
                 continue
