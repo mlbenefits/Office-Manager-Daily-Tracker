@@ -177,8 +177,16 @@ def get_first_response_time(convo):
     msgs.sort(key=lambda m: parse_ts(m.get("dateAdded") or m.get("date") or 0)
               or datetime.min.replace(tzinfo=timezone.utc))
 
+    OPT_OUT_KEYWORDS = {"stop", "stopall", "unsubscribe", "cancel", "end", "quit"}
+
     def is_inbound_trackable(msg):
-        return "ACTIVITY" not in str(msg.get("messageType", msg.get("type", ""))).upper()
+        msg_type = str(msg.get("messageType", msg.get("type", ""))).upper()
+        if "ACTIVITY" in msg_type:
+            return False
+        body = str(msg.get("body", "")).strip().lower()
+        if body in OPT_OUT_KEYWORDS:
+            return False
+        return True
 
     def is_outbound_trackable(msg):
         msg_type = str(msg.get("messageType", msg.get("type", ""))).upper()
