@@ -193,7 +193,7 @@ def get_first_response_time(convo):
         if "ACTIVITY" in msg_type:
             return False
         if "CALL" in msg_type or "VOICEMAIL" in msg_type:
-            return str(msg.get("status", "")).lower() in ("answered", "voicemail", "completed")
+            return str(msg.get("status", "")).lower() in ("answered", "voicemail")
         return True
 
     first_inbound_ts = None
@@ -286,13 +286,21 @@ def last_business_day(from_date):
 
 
 def main():
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--date", help="Date to process (YYYY-MM-DD). Defaults to last business day.")
+    args = parser.parse_args()
+
     if not API_KEY or not LOCATION_ID:
         print("ERROR: GHL_API_KEY and GHL_LOCATION_ID must be set")
         sys.exit(1)
 
-    now_eastern = datetime.now(timezone.utc).astimezone(EASTERN)
-    today = now_eastern.date()
-    data_date = last_business_day(today)
+    if args.date:
+        data_date = date.fromisoformat(args.date)
+    else:
+        now_eastern = datetime.now(timezone.utc).astimezone(EASTERN)
+        today = now_eastern.date()
+        data_date = last_business_day(today)
 
     print(f"=== Daily Response Time Update — {datetime.now().strftime('%Y-%m-%d %H:%M')} ===")
     print(f"Analyzing new conversations from: {data_date}")
